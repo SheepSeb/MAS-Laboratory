@@ -1,6 +1,6 @@
 from base import Agent, Action, Perception
 from representation import GridRelativeOrientation, GridOrientation
-from communication import SocialAction
+from communication import SocialAction, AgentMessage
 from hunting import HuntingEnvironment, WildLifeAgentData, WildLifeAgent
 from enum import Enum
 import pandas as pd
@@ -212,14 +212,112 @@ class MyPredator(WildLifeAgent):
         :param perceptions:
         :return:
         """
-        nearby_prey = [prey_pos for _, prey_pos in perceptions.nearby_prey]
-        return random.choice([MyAction.NORTH, MyAction.SOUTH, MyAction.EAST, MyAction.WEST])
+        agent_pos = perceptions.agent_position
+        probability_map = ProbabilityMap()
+        probability_map.put(MyAction.NORTH,  MyPrey.UP_PROB)
+        probability_map.put(MyAction.SOUTH, MyPrey.DOWN_PROB)
+        probability_map.put(MyAction.WEST, MyPrey.LEFT_PROB)
+        probability_map.put(MyAction.EAST, MyPrey.RIGHT_PROB)
 
+        for obstacle_pos in perceptions.obstacles:
+            if agent_pos.get_distance_to(obstacle_pos) > 1:
+                continue
+
+            relative_orientation = agent_pos.get_simple_relative_orientation(obstacle_pos)
+            if relative_orientation == GridRelativeOrientation.FRONT:
+                probability_map.remove(MyAction.NORTH)
+
+            elif relative_orientation == GridRelativeOrientation.BACK:
+                probability_map.remove(MyAction.SOUTH)
+
+            elif relative_orientation == GridRelativeOrientation.RIGHT:
+                probability_map.remove(MyAction.EAST)
+
+            elif relative_orientation == GridRelativeOrientation.LEFT:
+                probability_map.remove(MyAction.WEST)
+
+        ## save available moves
+        available_moves = ProbabilityMap(existing_map=probability_map)
+
+        ## examine actions which should be followed to catch the prey
+        ## this means that if the prey is in one of the 8 directions, the predator should remove the opposite direction
+        for (_, prey_pos) in perceptions.nearby_prey:
+            relative_pos = agent_pos.get_simple_relative_orientation(prey_pos)
+
+            if relative_pos == GridRelativeOrientation.FRONT:
+                probability_map.remove(MyAction.SOUTH)
+
+            elif relative_pos == GridRelativeOrientation.FRONT_LEFT:
+                probability_map.remove(MyAction.SOUTH)
+                probability_map.remove(MyAction.EAST)
+
+            elif relative_pos == GridRelativeOrientation.FRONT_RIGHT:
+                probability_map.remove(MyAction.SOUTH)
+                probability_map.remove(MyAction.WEST)
+
+            elif relative_pos == GridRelativeOrientation.LEFT:
+                probability_map.remove(MyAction.EAST)
+
+            elif relative_pos == GridRelativeOrientation.RIGHT:
+                probability_map.remove(MyAction.WEST)
+
+            elif relative_pos == GridRelativeOrientation.BACK:
+                probability_map.remove(MyAction.NORTH)
+
+            elif relative_pos == GridRelativeOrientation.BACK_LEFT:
+                probability_map.remove(MyAction.NORTH)
+                probability_map.remove(MyAction.EAST)
+
+            elif relative_pos == GridRelativeOrientation.BACK_RIGHT:
+                probability_map.remove(MyAction.NORTH)
+                probability_map.remove(MyAction.WEST)
+
+        if not probability_map.empty():
+            return probability_map.choice()
+        else:
+            return available_moves.choice()
+        
 
 class MyPredatorWithCommunication(MyPredator):
 
     def __init__(self, map_width=None, map_height=None):
         super(MyPredatorWithCommunication, self).__init__(map_width, map_height)
+        self.friends = {}
+        self.history_pos = []
+        self.back_moves = []
+        self.middle_moves = []
+        self.execute_middle = False
+        self.twice_count = 0
+        
+    def calculate_middle(self, agent_pos):
+        # Random value from the map on the x
+        middle_x = random.randint(0, self.map_width)
+        middle_y = random.randint(0, self.map_height)
+        position = agent_pos.get_x()
+        if middle_x % 2 != 0:
+            middle_x = int(middle_x)
+        else:
+            middle_x = int(middle_x - 1)
+        if middle_y % 2 != 0:
+            middle_y = int(middle_y)
+        else:
+            middle_y = int(middle_y - 1)
+        while position != middle_x:
+            if position < middle_x:
+                self.middle_moves.append(MyAction.EAST)
+                position += 1
+            else:
+                self.middle_moves.append(MyAction.WEST)
+                position -= 1
+            print(f'Agent id {self.id} Middle moves: {self.middle_moves}')
+        position = agent_pos.get_y()
+        while position != middle_y:
+            if position < middle_y:
+                self.middle_moves.append(MyAction.NORTH)
+                position += 1
+            else:
+                self.middle_moves.append(MyAction.SOUTH)
+                position -= 1
 
     def response(self, perceptions: MyAgentPerception) -> SocialAction:
         """
@@ -227,9 +325,141 @@ class MyPredatorWithCommunication(MyPredator):
         :param perceptions:
         :return:
         """
-        return SocialAction(random.choice([MyAction.NORTH, MyAction.SOUTH, MyAction.EAST, MyAction.WEST]))
+        action = None
+        action_dict = {
+            MyAction.NORTH: 0,
+            MyAction.SOUTH: 0,
+            MyAction.WEST: 0,
+            MyAction.EAST: 0,
+        }
+        # Go through the messages
+        for message in perceptions.messages:
+            if message.content is None:
+                continue
+            elif message.content == "Move Front":
+                action_dict[MyAction.NORTH] += 5
+            elif message.content == "Move Back":
+                action_dict[MyAction.SOUTH] += 5
+            elif message.content == "Move Right":
+                action_dict[MyAction.EAST] += 5
+            elif message.content == "Move Left":
+                action_dict[MyAction.WEST] += 5
+            elif message.content == "Middle":
+                if self.twice_count < 2:
+                    self.twice_count += 1
+                else:
+                    self.twice_count = 0
+                    self.execute_middle = True
+                # Go to the middle of the map
+                
+            
+        # Update the friends list
+        for (predator_id, predator_pos) in perceptions.nearby_predators:
+            if predator_id in self.friends:
+                continue
+            self.friends[predator_id] = predator_pos
+        
+        agent_pos = perceptions.agent_position
+        
+        # Check for obstacles
+        for obstacle_pos in perceptions.obstacles:
+            if agent_pos.get_distance_to(obstacle_pos) > 2:
+                continue
+            relative_orientation = agent_pos.get_simple_relative_orientation(obstacle_pos)
+            if relative_orientation == GridRelativeOrientation.FRONT:
+                action_dict[MyAction.NORTH] -= 3
+            elif relative_orientation == GridRelativeOrientation.BACK:
+                action_dict[MyAction.SOUTH] -= 3
+            elif relative_orientation == GridRelativeOrientation.RIGHT:
+                action_dict[MyAction.EAST] -= 3
+            elif relative_orientation == GridRelativeOrientation.LEFT:
+                action_dict[MyAction.WEST] -= 3
+        
+        # Get the closest prey and the relative position
+        closest_prey = None
+        for (prey_id, prey_pos) in perceptions.nearby_prey:
+            if closest_prey is None:
+                closest_prey = prey_pos
+            elif agent_pos.get_distance_to(prey_pos) < agent_pos.get_distance_to(closest_prey):
+                closest_prey = prey_pos
+                
+        print(f'Agent id {self.id} Closest prey: {closest_prey}')
+        if closest_prey is not None:
+            relative_pos = agent_pos.get_simple_relative_orientation(closest_prey)
+            
+            if relative_pos == GridRelativeOrientation.FRONT:
+                action_dict[MyAction.NORTH] += 5
+                self.execute_middle = False
+                self.middle_moves = []
+            elif relative_pos == GridRelativeOrientation.FRONT_LEFT:
+                action_dict[MyAction.NORTH] += 5
+                action_dict[MyAction.WEST] += 4
+                self.execute_middle = False
+                self.middle_moves = []
+            elif relative_pos == GridRelativeOrientation.FRONT_RIGHT:
+                action_dict[MyAction.NORTH] += 5
+                action_dict[MyAction.EAST] += 4
+                self.execute_middle = False
+                self.middle_moves = []
+            elif relative_pos == GridRelativeOrientation.BACK:
+                action_dict[MyAction.SOUTH] += 5
+                self.execute_middle = False
+                self.middle_moves = []
+            elif relative_pos == GridRelativeOrientation.BACK_LEFT:
+                action_dict[MyAction.SOUTH] += 5
+                action_dict[MyAction.WEST] += 4
+                self.execute_middle = False
+                self.middle_moves = []
+            elif relative_pos == GridRelativeOrientation.BACK_RIGHT:
+                action_dict[MyAction.SOUTH] += 5
+                action_dict[MyAction.EAST] += 4
+                self.execute_middle = False
+                self.middle_moves = []
+            elif relative_pos == GridRelativeOrientation.RIGHT:
+                action_dict[MyAction.EAST] += 5
+                self.execute_middle = False
+                self.middle_moves = []
+            elif relative_pos == GridRelativeOrientation.LEFT:
+                action_dict[MyAction.WEST] += 5
+            else:
+                self.execute_middle = True
+                self.middle_moves = []
+        
+        # Move to
 
-
+        message = None
+                            
+        # Get the highest value in the action_dict
+        action = max(action_dict, key=action_dict.get)  
+        
+        if self.execute_middle:
+            if len(self.middle_moves) == 0:
+                self.calculate_middle(agent_pos)
+            if len(self.middle_moves) > 0:
+                action = self.middle_moves.pop()
+                if len(self.middle_moves) == 0:
+                    self.execute_middle = False
+                    self.middle_moves = []
+            
+        print(f'Agent id {self.id} History: {self.history_pos}')
+                
+        social_action = SocialAction(action)
+        for predator_id in self.friends:
+            # If the predator will move to the same position as another predator, send a message with the opposite action
+            for (prey_id, prey_pos) in perceptions.nearby_prey:
+                relative_pos = predator_pos.get_simple_relative_orientation(prey_pos)
+                if relative_pos == GridRelativeOrientation.FRONT:
+                    message = "Move Front"
+                elif relative_pos == GridRelativeOrientation.BACK:
+                    message = "Move Back"
+                elif relative_pos == GridRelativeOrientation.RIGHT:
+                    message = "Move Right"
+                elif relative_pos == GridRelativeOrientation.LEFT:
+                    message = "Move Left"
+                else:
+                    message = "Middle"
+                social_action.add_outgoing_message(self.id, predator_id, message)          
+        return social_action
 
 class MyEnvironment(HuntingEnvironment):
     """
@@ -303,10 +533,11 @@ class MyEnvironment(HuntingEnvironment):
             prey = [(ag_data.linked_agent.id, ag_data.grid_position) for ag_data in nearby_prey]
 
             agent_perceptions[predator_data] = MyAgentPerception(agent_position=predator_data.grid_position,
-                                                                obstacles=nearby_obstacles,
-                                                                nearby_predators=predators,
-                                                                nearby_prey=prey,
-                                                                messages=self.message_box)
+                                                                 obstacles=nearby_obstacles,
+                                                                 nearby_predators=predators,
+                                                                 nearby_prey=prey,
+                                                                 messages=AgentMessage.filter_messages_for(self.message_box, predator_data.linked_agent))
+        
         """
         STAGE 2: call response for each agent to obtain desired actions
         """
@@ -314,7 +545,7 @@ class MyEnvironment(HuntingEnvironment):
         ## TODO: get actions for all agents
         for prey_data in self._prey_agents:
             agent_actions[prey_data] = prey_data.linked_agent.response(agent_perceptions[prey_data])
-            
+
         for predator_data in self._predator_agents:
             agent_actions[predator_data] = predator_data.linked_agent.response(agent_perceptions[predator_data])
 
@@ -353,7 +584,8 @@ class MyEnvironment(HuntingEnvironment):
                 ## TODO: handle case for a SocialAction instance
                 
                 if isinstance(predator_action, SocialAction):
-                    self.message_box.append((predator_data.linked_agent.id, predator_action.message))
+                    print("Predator %s is sending a message" % str(predator_data))
+                    self.message_box.extend(predator_action.outgoing_messages)
                     predator_action = predator_action.action
 
                 if predator_action == MyAction.NORTH:
@@ -398,17 +630,21 @@ class MyEnvironment(HuntingEnvironment):
 
 class Tester(object):
 
-    def __init__(self, predator_agent_type = MyPredator, num_predators=4, num_prey=10, width=15, height=10, rand_seed = 42, delay=0.1):
+    def __init__(self, predator_agent_type = MyPredator, num_predators=4, num_prey=10, width=10, height=15, rand_seed = 42, delay=0.1):
         self.num_predators = num_predators
         self.num_prey = num_prey
         self.width = width
         self.height = height
         self.delay = delay
 
+        # reset the agent counter for generating unique agent ids
+        WildLifeAgent.agent_counter = 0
+
         self.env = MyEnvironment(predator_agent_type, self.width, self.height, self.num_predators, self.num_prey, rand_seed=rand_seed)
         self.make_steps()
 
     def make_steps(self):
+        print("STEP")
         while not self.env.goals_completed():
             self.env.step()
 
@@ -423,6 +659,8 @@ class Tester(object):
 if __name__ == "__main__":
     # tester = Tester(predator_agent_type=MyPredator, rand_seed=42, delay=0.1)
     # step_count, prey_kill_times = tester.make_steps()
+    # print("Step count: ", step_count)
+    # print("Prey kill times: ", prey_kill_times)
 
     NUM_TESTS = 20
     
@@ -439,37 +677,42 @@ if __name__ == "__main__":
     # Make an analysis of the min, max, median step counts and standard deviation as a describe call
     print("Step count analysis")
     print(pd.Series(step_count_list).describe())
+    
+    with open('step_count_list.txt', 'a') as f:
+        f.write("Step count analysis for MyPredator\n")
+        # Write the statistics to the file from the describe call
+        f.write(pd.Series(step_count_list).describe().to_string())
+        
+    f.close()
 
     # Make an analysis of the most common kill times as a scatter plot
     print("Prey kill times analysis")
     prey_kill_times = [item for sublist in prey_kill_times_list for item in sublist]
     df = pd.DataFrame(prey_kill_times, columns=["Step", "Prey killed"])
-    df.plot(kind="scatter", x="Step", y="Prey killed", xlabel="Step", ylabel="Prey killed")
-    # Save the plot to a file and save the file with the analysis results
-    with open("analysis_nocommunication.txt", "w") as f:
-        f.write("Step count analysis\n")
-        f.write(pd.Series(step_count_list).describe().to_string())
-        f.write("\nPrey kill times analysis\n")
-        f.write(df.to_string())
-        
-    plt.savefig("analysis_nocommunication.png")
+    df.plot(kind="scatter", x="Step", y="Prey killed", xlabel="Step", ylabel="Prey killed", yticks=range(0, 11, 1))
     plt.show()
     
-    # for i in range(NUM_TESTS):
-    #     tester = Tester(predator_agent_type=MyPredatorWithCommunication, rand_seed=42+i, delay=0)
-    #     step_count, prey_kill_times = tester.make_steps()
+    for i in range(NUM_TESTS):
+        tester = Tester(predator_agent_type=MyPredatorWithCommunication, rand_seed=42+i, delay=0)
+        step_count, prey_kill_times = tester.make_steps()
 
-    #     step_count_list.append(step_count)
-    #     prey_kill_times_list.append(prey_kill_times)
+        step_count_list.append(step_count)
+        prey_kill_times_list.append(prey_kill_times)
 
-    # # Make an analysis of the min, max, median step counts and standard deviation as a describe call
-    # print("Step count analysis")
-    # print(pd.Series(step_count_list).describe())
+    # Make an analysis of the min, max, median step counts and standard deviation as a describe call
+    print("Step count analysis")
+    print(pd.Series(step_count_list).describe())
+    # Save to file 
+    with open('step_count_list.txt', 'a') as f:
+        f.write("Step count analysis for MyPredatorComm\n")
+        # Write the statistics to the file from the describe call
+        f.write(pd.Series(step_count_list).describe().to_string())
+        
+    f.close()
 
-    # # Make an analysis of the most common kill times as a scatter plot
-    # print("Prey kill times analysis")
-    # prey_kill_times = [item for sublist in prey_kill_times_list for item in sublist]
-    # df = pd.DataFrame(prey_kill_times, columns=["Step", "Prey killed"])
-    # df.plot(kind="scatter", x="Step", y="Prey killed", xlabel="Step", ylabel="Prey killed")
-    # plt.show()
-
+    # Make an analysis of the most common kill times as a scatter plot
+    print("Prey kill times analysis")
+    prey_kill_times = [item for sublist in prey_kill_times_list for item in sublist]
+    df = pd.DataFrame(prey_kill_times, columns=["Step", "Prey killed"])
+    df.plot(kind="scatter", x="Step", y="Prey killed", xlabel="Step", ylabel="Prey killed", yticks=range(0, 11, 1))
+    plt.show()

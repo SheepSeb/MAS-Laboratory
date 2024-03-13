@@ -246,6 +246,12 @@ class GridPosition(object):
         :return: True if the y coordinate is even
         """
         return abs(self.__y) % 2 == 0
+    
+    def get_x(self):
+        return self.__x
+    
+    def get_y(self):
+        return self.__y
 
 
 if __name__ == "__main__":

@@ -16,3 +16,134 @@ min       10.000000
 50%       57.000000
 75%       92.750000
 max      287.000000
+----------------------------------------
+Step count analysis for MyPredator
+count     20.000000
+mean      68.400000
+std       33.531446
+min       30.000000
+25%       42.750000
+50%       61.000000
+75%       91.250000
+max      137.000000
+Step count analysis for MyPredatorComm
+count     40.000000
+mean      68.225000
+std       37.482637
+min       10.000000
+25%       43.500000
+50%       53.500000
+75%       91.250000
+max      194.000000
+----------------------------------------
+Step count analysis for MyPredator
+count     20.000000
+mean      73.750000
+std       34.471766
+min       24.000000
+25%       49.500000
+50%       72.000000
+75%       89.500000
+max      150.000000
+Step count analysis for MyPredatorComm
+count     40.000000
+mean      70.900000
+std       38.005263
+min       10.000000
+25%       46.500000
+50%       60.000000
+75%       89.000000
+max      194.000000
+----------------------------------------
+Step count analysis for MyPredator
+count     20.000000
+mean      70.950000
+std       31.880492
+min       24.000000
+25%       48.000000
+50%       63.000000
+75%       91.000000
+max      145.000000
+Step count analysis for MyPredatorComm
+count     40.00000
+mean      69.50000
+std       36.80301
+min       10.00000
+25%       46.50000
+50%       56.00000
+75%       90.50000
+max      194.00000
+----------------------------------------
+Step count analysis for MyPredator
+count    20.000000
+mean     37.950000
+std      15.080399
+min      17.000000
+25%      25.750000
+50%      33.500000
+75%      50.250000
+max      76.000000
+Step count analysis for MyPredatorComm
+count     40.000000
+mean      36.225000
+std       19.225367
+min        9.000000
+25%       24.750000
+50%       31.500000
+75%       46.000000
+max      102.000000
+----------------------------------------
+Step count analysis for MyPredator
+count    20.00000
+mean      2.20000
+std       1.67332
+min       0.00000
+25%       1.00000
+50%       2.00000
+75%       3.25000
+max       6.00000
+Step count analysis for MyPredatorComm
+count    40.000000
+mean      1.825000
+std       1.375379
+min       0.000000
+25%       1.000000
+50%       1.000000
+75%       2.250000
+max       6.000000
+----------------------------------------
+20x20 - GridSize
+Step count analysis for MyPredator
+count     20.000000
+mean     255.300000
+std      107.099118
+min      105.000000
+25%      182.750000
+50%      252.500000
+75%      317.750000
+max      530.000000
+Step count analysis for MyPredatorComm
+count     40.00000
+mean     211.30000
+std      114.22901
+min       53.00000
+25%      120.75000
+50%      183.50000
+75%      291.75000
+max      530.00000Step count analysis for MyPredator
+count     20.000000
+mean     255.300000
+std      107.099118
+min      105.000000
+25%      182.750000
+50%      252.500000
+75%      317.750000
+max      530.000000Step count analysis for MyPredatorComm
+count     40.00000
+mean     211.30000
+std      114.22901
+min       53.00000
+25%      120.75000
+50%      183.50000
+75%      291.75000
+max      530.00000

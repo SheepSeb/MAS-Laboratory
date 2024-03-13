@@ -1,0 +1,18 @@
+Step count analysis for MyPredator
+count     20.000000
+mean      78.900000
+std       60.062161
+min       25.000000
+25%       32.500000
+50%       71.500000
+75%       96.250000
+max      287.000000
+Step count analysis for MyPredatorComm
+count     40.000000
+mean      73.475000
+std       51.427812
+min       10.000000
+25%       41.000000
+50%       57.000000
+75%       92.750000
+max      287.000000

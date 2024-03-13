@@ -349,9 +349,7 @@ class MyPredatorWithCommunication(MyPredator):
                     self.twice_count += 1
                 else:
                     self.twice_count = 0
-                    self.execute_middle = True
-                # Go to the middle of the map
-                
+                    self.execute_middle = True        
             
         # Update the friends list
         for (predator_id, predator_pos) in perceptions.nearby_predators:
@@ -630,7 +628,7 @@ class MyEnvironment(HuntingEnvironment):
 
 class Tester(object):
 
-    def __init__(self, predator_agent_type = MyPredator, num_predators=4, num_prey=10, width=10, height=15, rand_seed = 42, delay=0.1):
+    def __init__(self, predator_agent_type = MyPredator, num_predators=4, num_prey=10, width=20, height=20, rand_seed = 42, delay=0.1):
         self.num_predators = num_predators
         self.num_prey = num_prey
         self.width = width
@@ -668,7 +666,7 @@ if __name__ == "__main__":
     prey_kill_times_list = []
 
     for i in range(NUM_TESTS):
-        tester = Tester(predator_agent_type=MyPredator, rand_seed=42+i, delay=0)
+        tester = Tester(predator_agent_type=MyPredator, rand_seed=1+i, delay=0)
         step_count, prey_kill_times = tester.make_steps()
 
         step_count_list.append(step_count)

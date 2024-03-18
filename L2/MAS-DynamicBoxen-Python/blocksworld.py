@@ -3,8 +3,8 @@ from io import TextIOWrapper
 from typing import Iterable, List, Set, Dict
 from collections import deque
 
-
 """ ======================================== Blocksworld base ======================================== """
+
 
 class Block(object):
     def __init__(self, label: str):
@@ -26,7 +26,6 @@ class Block(object):
     def __str__(self):
         return self.label
 
-
     def __repr__(self):
         return self.__str__()
 
@@ -43,6 +42,8 @@ class Station(Block):
 
 
 """ ======================================== Blocksworld actions ======================================== """
+
+
 class BlocksWorldAction(Action):
 
     def __init__(self, type: str, **kwargs):
@@ -59,7 +60,6 @@ class BlocksWorldAction(Action):
             else:
                 self._args.append(kwargs['arg2'])
 
-
     def has_no_args(self) -> bool:
         return not self._args
 
@@ -69,13 +69,11 @@ class BlocksWorldAction(Action):
     def has_two_args(self) -> bool:
         return len(self._args) == 2
 
-
     def get_first_arg(self) -> Block:
         if len(self._args) >= 1:
             return self._args[0]
 
         raise ValueError("Action %s has no first argument!" % self._type)
-
 
     def get_second_arg(self) -> Block:
         if len(self._args) == 2:
@@ -83,24 +81,20 @@ class BlocksWorldAction(Action):
 
         raise ValueError("Action %s has no second argument!" % self._type)
 
-
     def get_argument(self) -> Block:
         if self.has_one_arg():
             return self.get_first_arg()
 
         raise ValueError("Action %s has either no argument, or two arguments" % self._type)
 
-
     def get_type(self) -> str:
         return self._type
-
 
     def __hash__(self):
         if self.has_one_arg():
             return 42
         else:
             return sum([hash(arg) for arg in self._args])
-
 
     def __eq__(self, other):
         if isinstance(other, self.__class__):
@@ -118,13 +112,11 @@ class BlocksWorldAction(Action):
 
         return False
 
-
     def __str__(self):
         if self.has_no_args():
             return self._type
 
         return self._type + "(" + " ".join([str(b) for b in self._args]) + ")"
-
 
 
 class PickUp(BlocksWorldAction):
@@ -139,7 +131,8 @@ class PutDown(BlocksWorldAction):
 
 class Unstack(BlocksWorldAction):
     def __init__(self, target_block: Block, from_block: Block):
-        super(Unstack, self).__init__("unstack", arg1= target_block, arg2=from_block)
+        super(Unstack, self).__init__("unstack", arg1=target_block, arg2=from_block)
+
 
 class Stack(BlocksWorldAction):
     def __init__(self, target_block: Block, on_block: Block):
@@ -155,13 +148,21 @@ class AgentCompleted(BlocksWorldAction):
     def __init__(self):
         super(AgentCompleted, self).__init__("agent_completed")
 
+    def __str__(self):
+        super(AgentCompleted, self).__str__()
+
 
 class NoAction(BlocksWorldAction):
     def __init__(self):
         super(NoAction, self).__init__("no_action")
 
+    def __str__(self):
+        super(NoAction, self).__str__()
+
 
 """ ======================================== Blocksworld state ======================================== """
+
+
 class Predicate(object):
 
     def __init__(self, type: str, **kwargs: Dict[str, Block]):
@@ -191,13 +192,11 @@ class Predicate(object):
 
         raise ValueError("Predicate %s has no arguments" % self.type)
 
-
     def get_second_arg(self) -> Block:
         if self.second_arg:
             return self.second_arg
 
         raise ValueError("Predicate %s has less than two arguments" % self.type)
-
 
     def get_argument(self) -> Block:
         if self.nr_arguments >= 1:
@@ -205,13 +204,11 @@ class Predicate(object):
 
         raise ValueError("Predicate %s has no arguments" % self.type)
 
-
     def __str__(self):
         if self.nr_arguments == 0:
             return self.type
 
         return self.type + "(" + " ".join([str(b) for b in self._args]) + ")"
-
 
     def __repr__(self):
         return self.__str__()
@@ -219,28 +216,32 @@ class Predicate(object):
 
 class ArmEmpty(Predicate):
     def __init__(self):
-        super(ArmEmpty,self).__init__("arm_empty")
+        super(ArmEmpty, self).__init__("arm_empty")
+
 
 class Hold(Predicate):
     def __init__(self, block: Block):
         super(Hold, self).__init__("hold", arg1=block)
 
+
 class On(Predicate):
     def __init__(self, top_block: Block, bottom_block: Block):
         super(On, self).__init__("on", arg1=top_block, arg2=bottom_block)
 
+
 class OnTable(Predicate):
     def __init__(self, block: Block):
         super(OnTable, self).__init__("on_table", arg1=block)
+
 
 class Clear(Predicate):
     def __init__(self, block: Block):
         super(Clear, self).__init__("clear", arg1=block)
 
 
-
-
 """ ======================================== Blocksworld state ======================================== """
+
+
 class BlockStack(object):
     """
     Class representing a stack of blocks in blocksworld.
@@ -249,6 +250,7 @@ class BlockStack(object):
     `isClear(Block)'.
     For methods working on a group of `Stacks', see `BlocksWorld' class.
     """
+
     def __init__(self, base: Block = None, blocks: Iterable = None, locked: Iterable = None):
         if not base and not blocks:
             raise ValueError("Cannot initialize a stack without any block!")
@@ -264,11 +266,9 @@ class BlockStack(object):
         else:
             self.locked_blocks = []
 
-
     def sane(self) -> bool:
         if not self.blocks and not self.locked_blocks:
             raise ValueError("This stack contains no blocks")
-
 
     def is_single_block(self) -> bool:
         return len(self.get_blocks()) == 1
@@ -280,14 +280,12 @@ class BlockStack(object):
 
         return False
 
-
     def is_clear(self, block: Block) -> bool:
         self.sane()
         if self.blocks[-1] == block:
             return True
 
         return False
-
 
     def is_on(self, top_block: Block, bottom_block: Block):
         self.sane()
@@ -303,7 +301,6 @@ class BlockStack(object):
 
         return False
 
-
     def get_above(self, block: Block) -> Block:
         if not block in self.get_blocks():
             raise ValueError("Block [%s] is not in this stack" % str(block))
@@ -313,7 +310,6 @@ class BlockStack(object):
         else:
             block_idx = self.get_blocks().index(block)
             return self.get_blocks()[block_idx + 1]
-
 
     def get_below(self, block: Block) -> Block:
         if not block in self.get_blocks():
@@ -325,7 +321,6 @@ class BlockStack(object):
             block_idx = self.get_blocks().index(block)
             return self.get_blocks()[block_idx - 1]
 
-
     def get_blocks(self) -> List[Block]:
         """
         Get all blocks in this stack as a list
@@ -336,29 +331,24 @@ class BlockStack(object):
         ret.extend(list(copy(self.blocks)))
         return ret
 
-
     def get_locked_blocks(self) -> List[Block]:
         from copy import copy
         return copy(self.locked_blocks)
-
 
     def get_top_block(self) -> Block:
         if self.get_blocks():
             return self.get_blocks()[-1]
         return None
 
-
     def get_bottom_block(self) -> Block:
         if self.get_blocks():
             return self.get_blocks()[0]
         return None
 
-
     def is_locked(self, block: Block) -> bool:
         if block in self.locked_blocks:
             return True
         return False
-
 
     def unstack(self, to_unstack: Block, unstack_from: Block) -> Block:
         """
@@ -384,14 +374,12 @@ class BlockStack(object):
 
         raise ValueError("Block [%s] is not the topmost block of this stack" % str(to_unstack))
 
-
     def stack(self, to_stack: Block, stack_over: Block) -> None:
         self.sane()
         if self.get_blocks()[-1] == stack_over:
             self.blocks.append(to_stack)
         else:
             raise ValueError("Block [%s] is not the topmost block of this stack" % str(stack_over))
-
 
     def lock(self, block: Block) -> None:
         """
@@ -404,10 +392,9 @@ class BlockStack(object):
         if not self.is_on_table(block) and not self.get_below(block) in self.locked_blocks:
             raise ValueError("The block under [%s] is not locked" % str(block))
 
-        #self.locked_blocks.insert(0, block)
+        # self.locked_blocks.insert(0, block)
         self.locked_blocks.append(block)
         self.blocks.popleft()
-
 
     def __contains__(self, item):
         if not isinstance(item, Block):
@@ -416,13 +403,11 @@ class BlockStack(object):
             ret = True if item in self.get_blocks() else False
             return ret
 
-
     def __hash__(self):
         if not self.get_blocks():
             return 42
 
         return sum([hash(block) for block in list(self.get_blocks())])
-
 
     def __eq__(self, other):
         if isinstance(other, self.__class__):
@@ -441,14 +426,11 @@ class BlockStack(object):
         else:
             return False
 
-
     def __str__(self):
         return " ".join([str(b) for b in list(self.get_blocks())])
 
-
     def __repr__(self):
         return self.__str__()
-
 
     def get_predicates(self) -> List[Predicate]:
         above = None
@@ -468,8 +450,6 @@ class BlockStack(object):
         return ret
 
 
-
-
 class BlocksWorld(object):
     def __init__(self, input_stream: TextIOWrapper = None):
         self.stacks = []
@@ -477,7 +457,6 @@ class BlocksWorld(object):
 
         if input_stream:
             self.__read_world(input_stream)
-
 
     def __read_world(self, input_stream: TextIOWrapper):
         self.stacks = []
@@ -524,14 +503,11 @@ class BlocksWorld(object):
 
             self.stacks.append(BlockStack(blocks=tower))
 
-
     def get_all_blocks(self) -> Set[Block]:
         return set(list(self.all_blocks))
 
-
     def exists(self, block: Block) -> bool:
         return block in self.all_blocks
-
 
     def get_stack(self, block: Block) -> BlockStack:
         """
@@ -548,11 +524,9 @@ class BlocksWorld(object):
 
         raise ValueError("Block [%s] is not currently in any stack" % str(block))
 
-
     def get_stacks(self) -> List[BlockStack]:
         from copy import copy
         return copy(self.stacks)
-
 
     def pick_up(self, block: Block):
         stack = self.get_stack(block)
@@ -564,33 +538,27 @@ class BlocksWorld(object):
 
         return stack.get_top_block()
 
-
     def put_down(self, block: Block, current_stack: BlockStack) -> BlockStack:
         if not block in self.all_blocks:
             raise ValueError("Block [%s] has never existed in this world" % str(block))
 
-        stack = BlockStack(base = block)
+        stack = BlockStack(base=block)
         stack_idx = self.stacks.index(current_stack)
         self.stacks.insert(stack_idx, stack)
 
         return stack
 
-
     def unstack(self, to_unstack: Block, unstack_from: Block) -> Block:
         return self.get_stack(to_unstack).unstack(to_unstack=to_unstack, unstack_from=unstack_from)
-
 
     def stack(self, to_stack: Block, stack_over: Block) -> None:
         self.get_stack(stack_over).stack(to_stack=to_stack, stack_over=stack_over)
 
-
     def lock(self, block: Block) -> None:
         self.get_stack(block).lock(block)
 
-
     def is_on_table(self, block: Block) -> bool:
         return self.get_stack(block).is_on_table(block)
-
 
     def clone(self) -> 'BlocksWorld':
         from copy import copy
@@ -600,23 +568,20 @@ class BlocksWorld(object):
         world.stacks = []
 
         for stack in self.stacks:
-            world.stacks.append(BlockStack(blocks = stack.get_blocks(), locked=stack.get_locked_blocks()))
+            world.stacks.append(BlockStack(blocks=stack.get_blocks(), locked=stack.get_locked_blocks()))
 
         return world
-
 
     def __str__(self):
         return self._print_world(0)
 
-
     def __repr__(self):
         return self.__str__()
 
-
     def _print_world(self, stack_space: int,
-                    prefixes: Dict[BlockStack, List[str]] = None,
-                    suffixes: Dict[BlockStack, List[str]] = None,
-                    print_table = True) -> str:
+                     prefixes: Dict[BlockStack, List[str]] = None,
+                     suffixes: Dict[BlockStack, List[str]] = None,
+                     print_table=True) -> str:
 
         stack_space = max(stack_space, 3)
         max_height = max([len(s.get_blocks()) for s in self.stacks])
@@ -651,8 +616,6 @@ class BlocksWorld(object):
 
         return ret
 
-
-
     def _print_additional(self, additional: Dict[BlockStack, List[str]], stack_space: int) -> str:
         ret = ""
 
@@ -672,7 +635,6 @@ class BlocksWorld(object):
             ret += "\n"
 
         return ret
-
 
     def to_predicates(self) -> Iterable:
         ret = []

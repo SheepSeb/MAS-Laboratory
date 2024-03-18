@@ -3,6 +3,8 @@ from base import Environment, Agent, Perception
 import random
 
 """ ======================================== Blocksworld agent ======================================== """
+
+
 class BlocksWorldPerception(Perception):
     def __init__(self, current_world: BlocksWorld, current_station: Station, previous_action_succeeded: bool):
         super(BlocksWorldPerception, self).__init__()
@@ -18,9 +20,8 @@ class BlocksWorldAgent(Agent):
     perceptions.
     """
 
-    def __init__(self, name = None):
+    def __init__(self, name=None):
         super(BlocksWorldAgent, self).__init__(name)
-
 
     def response(self, perception: BlocksWorldPerception) -> BlocksWorldAction:
         """
@@ -36,13 +37,11 @@ class BlocksWorldAgent(Agent):
         """
         raise NotImplementedError("Missing a response")
 
-
     def status_string(self):
         """
         :return: a string that is printed at every cycle to show the status of the agent.
         """
         return NotImplementedError("Missing a status string")
-
 
     def __str__(self):
         """
@@ -51,11 +50,11 @@ class BlocksWorldAgent(Agent):
         return "A"
 
 
-
 class AgentData(object):
     """
     Contains data for each agent in the environment
     """
+
     def __init__(self, linked_agent: BlocksWorldAgent, target: BlocksWorld, initial_station: Station):
         """
         Default constructor.
@@ -70,14 +69,12 @@ class AgentData(object):
         self.previous_action_succeeded = True
         self.holding = None
 
-
     def __str__(self):
         return "Agent %s at %s holding %s; previous action: %s" \
-               % (str(self.agent),
-                  str(self.station),
-                  str(self.holding) if self.holding else "none",
-                  "successful" if self.previous_action_succeeded else "failed")
-
+            % (str(self.agent),
+               str(self.station),
+               str(self.holding) if self.holding else "none",
+               "successful" if self.previous_action_succeeded else "failed")
 
     def __eq__(self, other):
         if isinstance(other, self.__class__):
@@ -95,10 +92,8 @@ class BlocksWorldEnvironment(Environment):
         idx = ord("0")
         self.station = Station(str(chr(idx)))
 
-
     def add_agent(self, agent: BlocksWorldAgent, desires, placement):
         self.agents_data.append(AgentData(linked_agent=agent, target=desires, initial_station=self.station))
-
 
     def _get_agent_data(self, agent: Agent):
         for adata in self.agents_data:
@@ -106,7 +101,6 @@ class BlocksWorldEnvironment(Environment):
                 return adata
 
         raise ValueError("Agent %s has not been added to the environment" % str(agent))
-
 
     def step(self) -> bool:
         print("\n".join([str(adata) for adata in self.agents_data]))
@@ -126,7 +120,7 @@ class BlocksWorldEnvironment(Environment):
             adata.previous_action_succeeded = False
 
             if (act.get_type() == "putdown" or act.get_type() == "stack") and \
-                (not adata.holding or adata.holding != act.get_first_arg()):
+                    (not adata.holding or adata.holding != act.get_first_arg()):
                 raise RuntimeError("Can't work with that block [%s]; agent is holding [%s]"
                                    % (str(act.get_first_arg()), str(adata.holding)))
 
@@ -167,7 +161,7 @@ class BlocksWorldEnvironment(Environment):
 
                 if not block_in_stacks:
                     raise RuntimeError("The block [%s] is not in any of the current world stacks "
-                                     % (str(act.get_first_arg())))
+                                       % (str(act.get_first_arg())))
 
                 adata.holding = self.worldstate.unstack(act.get_first_arg(), act.get_second_arg())
                 adata.previous_action_succeeded = True
@@ -213,11 +207,9 @@ class BlocksWorldEnvironment(Environment):
             else:
                 raise RuntimeError("Should not be here: action not recognized %s" % act.get_type())
 
-
         if completed == len(self.agents_data):
             return True
-        return False    # return True when the simulation should stop (only when all agents completed their goals)
-
+        return False  # return True when the simulation should stop (only when all agents completed their goals)
 
     def __str__(self):
         prefix = {}
@@ -238,25 +230,20 @@ class BlocksWorldEnvironment(Environment):
         return self.worldstate._print_world(6, prefixes=prefix, suffixes=suffix, print_table=False)
 
 
-
-
-
-
-
-
 """ ========================================= DYNAMIC ENVIRONMENT ========================================= """
 
-class DynamicAction(object):
-    STASH       = "stash"
-    STASH_PROB  = 0.15
 
-    UNSTASH     = "unstash"
+class DynamicAction(object):
+    STASH = "stash"
+    STASH_PROB = 0.15
+
+    UNSTASH = "unstash"
     UNSTASH_PROB = 0.25
 
-    DROP        = "drop"
-    DROP_PROB   = 0.3
+    DROP = "drop"
+    DROP_PROB = 0.3
 
-    TELEPORT    = "teleport"
+    TELEPORT = "teleport"
     TELEPORT_PROB = 0.3
 
     ACTIONS = [
@@ -287,15 +274,12 @@ class DynamicAction(object):
         return self.type
 
 
-
 class DynamicEnvironment(BlocksWorldEnvironment):
-
     HEAD = "\t\t\t\t\t\t\t\t<DYNAMICS>"
 
     def __init__(self, world: BlocksWorld):
         super(DynamicEnvironment, self).__init__(world)
         self.stash = set([])
-
 
     def _perform_dynamic_action(self) -> None:
         from my import Tester
@@ -362,23 +346,18 @@ class DynamicEnvironment(BlocksWorldEnvironment):
             else:
                 raise RuntimeError("Unrecognized dynamic action type: %s" % dyna.type)
 
-
-
-
     def _pick_stack(self, can_be_single: bool, can_be_locked: bool, observed_stacks: Set[BlockStack]) -> BlockStack:
         choice_stacks = []
         for s in self.worldstate.get_stacks():
             if (can_be_single or not s.is_single_block()) and \
                     (can_be_locked or not s.is_locked(s.get_top_block())):
-                        choice_stacks.append(s)
+                choice_stacks.append(s)
 
         return None if not choice_stacks else random.choice(choice_stacks)
-
 
     def step(self):
         self._perform_dynamic_action()
         return super(DynamicEnvironment, self).step()
-
 
     def __str__(self):
         return super(DynamicEnvironment, self).__str__() + "Stash: %s \n" % (" ".join([str(b) for b in self.stash]))

@@ -149,7 +149,7 @@ class AgentCompleted(BlocksWorldAction):
         super(AgentCompleted, self).__init__("agent_completed")
 
     def __str__(self):
-        super(AgentCompleted, self).__str__()
+        return super(AgentCompleted, self).__str__()
 
 
 class NoAction(BlocksWorldAction):
@@ -157,7 +157,7 @@ class NoAction(BlocksWorldAction):
         super(NoAction, self).__init__("no_action")
 
     def __str__(self):
-        super(NoAction, self).__str__()
+        return super(NoAction, self).__str__()
 
 
 """ ======================================== Blocksworld state ======================================== """

@@ -7,78 +7,66 @@ class MyAgent(BlocksWorldAgent):
     def __init__(self, name: str, desired_state: BlocksWorld):
         super(MyAgent, self).__init__(name=name)
         self.desired_state = desired_state
+        self.desired_state_stack = self.desired_state.get_stacks()
         self.current_plan: List[BlocksWorldAction] = []
         self.beliefs: BlocksWorldPerception = None
         self.completed_stacks = 0
+        self.arm_empty = True
 
     def response(self, perception: BlocksWorldPerception):
         # TODO: revise beliefs; if necessary, make a plan; return an action.
-        if perception.current_world == self.desired_state:
-            return NoAction()
-        else:
-            if self.revise_beliefs(perception.current_world) is True:
-                self.beliefs = perception.current_world
-                print("Current plan: ", self.current_plan.pop(0))
-                return self.current_plan.pop(0)
-            else:
-                self.beliefs = perception
-                print("Arm empty: ", ArmEmpty())
-                if ArmEmpty():
-                    self.current_plan = self.plan()
-                return self.current_plan.pop(0)
-        # raise NotImplementedError("not implemented yet; todo by student")
-        # return NoAction()
+        self.beliefs = perception
+        # self.revise_beliefs(perception.current_world)
+        # if len(self.plan()) == 0:
+        #     return NoAction()
+        # return self.plan().pop(0)
+        print("Agent %s received perception: %s" % (str(self), str(perception.current_world.stacks)))
+        print("Agent desired state: %s" % str(self.desired_state.stacks))
+
+        return self.plan().pop(0)
 
     def revise_beliefs(self, perceived_world_state: BlocksWorld):
-        # TODO: check if what the agent knows corresponds to what the agent sees
-        # raise NotImplementedError("not implemented yet; todo by student")
-        if self.beliefs is None:
-            return False
-        print("Perceived world state:\n", perceived_world_state)
-        print("Beliefs:\n", self.beliefs.current_world)
-        print("If perceived world state is equal to beliefs: ", perceived_world_state == self.beliefs.current_world)
-        if perceived_world_state == self.beliefs.current_world:
-            return True
-        return False
+        # TODO: check if what the agent knows corresponds to what the agent sees.
+        # If not, update the agent's beliefs.
+        # Get the stacks and check
+        perceived_stacks = perceived_world_state.get_stacks()
+        # Remove the duplicates H H L P
+        correct_stacks = []
+        for stack in perceived_stacks:
+            blc_stack = set(stack.get_blocks())
+            correct_stacks.append(BlockStack(stack.get_bottom_block(), blc_stack))
+        pass
+
+    def __lock_correct_block(self, stacks: List[BlockStack]):
+        for stack in stacks:
+            if stack in self.desired_state_stack:
+                for block in stack.get_blocks():
+                    if stack.is_locked(block) is False:
+                        return Lock(block)
+
+        return NoAction()
 
     def plan(self) -> List[BlocksWorldAction]:
         # TODO: return a new plan, as a sequence of `BlocksWorldAction' instances, based on the agent's knowledge.
-        # print("Agent %s is planning." % str(self))
+
         action_list: List[BlocksWorldAction] = []
         current_world = self.beliefs.current_world
-        desired_world = self.desired_state
 
-        current_stacks = current_world.get_stacks()
-        desired_stacks = desired_world.get_stacks()
+        self.current_plan = []
+        if current_world == self.desired_state:
+            return [AgentCompleted()]
 
-        print("Current stacks: ", current_stacks)
-        print("Desired stacks: ", desired_stacks)
+        self.desired_state.lock(Block("B"))
+        # Lock also in the desired state
+        # Lock the correct block
 
-        # Remove the stacks that are already in the desired state
-        for stack in current_stacks:
-            if stack in desired_stacks:
-                blocks = stack.get_blocks()
-                for block in blocks:
-                    action_list.append(Lock(block))
-                desired_stacks.remove(stack)
-            else:
-                action_list.append(Unstack(stack.get_top_block(), stack.get_below(stack.get_top_block())))
-                action_list.append(PutDown(stack.get_top_block()))
-
-        print("Desired stacks after removal: ", desired_stacks)
-
-        print("Action list: ", action_list)
-
-        if action_list:
-            return action_list
-        elif not ArmEmpty():
-            print("Arm not empty")
-        return [NoAction()]
+        # Move the blocks to the correct position
+        return [Lock(Block("B"))]
 
     def status_string(self):
         # TODO: return information about the agent's current state and current plan.
         # return str(self) + " : PLAN MISSING"
-        if self.plan():
+        if self.current_plan is not None and len(self.plan()) > 0:
             return str(self) + " : PLAN " + str(self.plan())
         return str(self) + " : PLAN MISSING"
 
@@ -91,7 +79,7 @@ class Tester(object):
     SI = "si"
     SF = "sf"
 
-    DYNAMICITY = .0
+    DYNAMICITY = .3
 
     AGENT_NAME = "*A"
 

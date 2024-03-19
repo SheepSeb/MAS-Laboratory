@@ -2,6 +2,11 @@ from environment import *
 import time
 
 
+def process_stack(stack):
+    processed_blocks = list(dict.fromkeys(stack.get_blocks()))
+    return processed_blocks
+
+
 class MyAgent(BlocksWorldAgent):
 
     def __init__(self, name: str, desired_state: BlocksWorld):
@@ -11,14 +16,16 @@ class MyAgent(BlocksWorldAgent):
         self.beliefs: BlocksWorld = None
         self.locked_blocks = []
         self.arm_empty = True
+        self.flag_lock = False
 
     def response(self, perception: BlocksWorldPerception):
         # TODO: revise beliefs; if necessary, make a plan; return an action.
+        print("Current plan: " + str(self.current_plan))
         self.revise_beliefs(perception.current_world)
         if self.current_plan is None or len(self.current_plan) == 0:
             self.current_plan = self.plan()
+        print("After Current plan: " + str(self.current_plan))
         if len(self.current_plan) > 0:
-            print("Current plan: " + str(self.current_plan))
             action = self.current_plan.pop(0)
             if isinstance(action, Lock):
                 block = action.get_argument()
@@ -27,6 +34,11 @@ class MyAgent(BlocksWorldAgent):
                 self.arm_empty = False
             elif isinstance(action, PutDown):
                 self.arm_empty = True
+            elif isinstance(action, PickUp):
+                self.arm_empty = False
+            elif isinstance(action, Stack):
+                self.arm_empty = True
+                self.flag_lock = True
             return action
         else:
             return NoAction()
@@ -38,24 +50,36 @@ class MyAgent(BlocksWorldAgent):
         # print("Perceived: ",perceived_world_state)
         # print("Beliefes vs percevied ",self.beliefs != perceived_world_state)
         if self.beliefs is None or self.beliefs != perceived_world_state:
+            if self.beliefs is None:
+                self.beliefs = perceived_world_state
+            completed = 0
+            for stack in self.desired_state.stacks:
+                for s in perceived_world_state.stacks:
+                    if stack.get_top_block() == s.get_top_block() and s.is_locked(stack.get_top_block()):
+                        completed += 1
+            print("Completed: ", completed)
+            print("Len: ", len(self.desired_state.stacks))
+            if completed == len(self.desired_state.stacks):
+                self.current_plan = [AgentCompleted()]
+                return
             self.beliefs = perceived_world_state
-            if self.arm_empty:
+            if self.arm_empty and not self.flag_lock:
                 self.current_plan = self.plan()
+                self.flag_lock = False
         else:
-            self.beliefs = perceived_world_state
+                self.beliefs = perceived_world_state
         pass
 
     def plan(self) -> List[BlocksWorldAction]:
-
-        def process_stack(stack):
-            processed_blocks = list(dict.fromkeys(stack.get_blocks()))
-            return processed_blocks
-
 
         # TODO: return a new plan, as a sequence of `BlocksWorldAction' instances, based on the agent's knowledge.
         action_plan = []
         # print("Desired state: " + str(self.desired_state.stacks))
         # print("Beliefs: " + str(self.beliefs.stacks))
+        complete = 0
+        if complete == len(self.desired_state.stacks):
+            return [AgentCompleted()]
+
         for stack in self.desired_state.stacks:
             for current_stacks in self.beliefs.stacks:
                 current_blocks = process_stack(current_stacks)
@@ -78,6 +102,21 @@ class MyAgent(BlocksWorldAgent):
                 desired_bot_block = desired_stack.get_bottom_block()
                 if top_block == desired_bot_block and not stack.is_locked(top_block):
                     action_plan.append(Lock(top_block))
+
+        for desired_stack in self.desired_state.stacks:
+            next_after_bot = desired_stack.get_above(desired_stack.get_bottom_block())
+            for stack in self.beliefs.stacks:
+                if stack.get_top_block() == next_after_bot and not stack.is_locked(next_after_bot):
+                    action_plan.append(PickUp(next_after_bot))
+                    action_plan.append(Stack(next_after_bot, desired_stack.get_below(next_after_bot)))
+                    action_plan.append(Lock(next_after_bot))
+
+        for desired_stack in self.desired_state.stacks:
+            top_block = desired_stack.get_top_block()
+            if not desired_stack.is_locked(top_block):
+                action_plan.append(PickUp(top_block))
+                action_plan.append(Stack(top_block, desired_stack.get_below(top_block)))
+                action_plan.append(Lock(top_block))
 
         if len(action_plan) != 0:
             return action_plan

@@ -7,6 +7,7 @@ import types
 import value_iter
 import gauss_seidel
 import policy_iteration
+import prioritise_sweeping as ps
 
 def optimal_values(env:gym.Env, iterations=5e5, epsilon=1e-3, gamma=0.9):
     optimal_values = { state: 0 for state in range(env.observation_space.n)}
@@ -60,6 +61,25 @@ def policy_iteration_average_score(env, optimal_values, tries=5):
 
     return iteration_values_tries[median_idx], crt_values_tries[median_idx]
 
+def avg_score(env, optimal_values, tries=5):
+    iteration_values_tries = []
+    crt_values_tries = []
+    iteration_groundtruth_diff = []
+
+    median_idx = tries // 2
+
+    for _ in range(tries):
+        crt_iteration_values, crt_values = ps.prioritis_sweeping(env, optimal_values)
+        iteration_values_tries.append(crt_iteration_values)
+        crt_values_tries.append(crt_values)
+        iteration_groundtruth_diff.append(compare_values(crt_values, optimal_values))
+
+
+    indexes = np.argsort(iteration_groundtruth_diff)
+    median_idx = indexes[median_idx]
+
+    return iteration_values_tries[median_idx], crt_values_tries[median_idx]
+
 def compare_values(v1, optimal_values):
     diff = 0
     for state in optimal_values:
@@ -82,8 +102,9 @@ def values_plot(env:gym.Env):
     value_iter_values, _ = value_iter.value_iteration(env, game_optimal_value)
     gauss_seidel_values, _ = gauss_seidel.gauss_seidel_value_iter(env, game_optimal_value)
     policy_iter_values, _ = policy_iteration_average_score(env, game_optimal_value)
+    priorites_values, _ = avg_score(env, game_optimal_value)
     
-    ys = pad_ys([value_iter_values, policy_iter_values, gauss_seidel_values])
+    ys = pad_ys([value_iter_values, policy_iter_values, gauss_seidel_values, priorites_values])
     
     
     return ys

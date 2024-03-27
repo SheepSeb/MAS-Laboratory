@@ -1,0 +1,4 @@
+Gauss conveerge cel mai repede
+Prioritized sweeping merge pana intr un pct (probabil e de la mine)
+Policy iternation cateodata nu merge bine (FrozenLake8x8) (probabil e de la mine)
+Pe taxi v3 random start este atenuat,

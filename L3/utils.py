@@ -104,7 +104,7 @@ def values_plot(env:gym.Env):
     policy_iter_values, _ = policy_iteration_average_score(env, game_optimal_value)
     priorites_values, _ = avg_score(env, game_optimal_value)
     
-    ys = pad_ys([value_iter_values, policy_iter_values, gauss_seidel_values, priorites_values])
+    ys = pad_ys([value_iter_values, policy_iter_values, gauss_seidel_values])
     
     
     return ys
